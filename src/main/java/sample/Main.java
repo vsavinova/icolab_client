@@ -65,14 +65,18 @@ public class Main extends Application {
         submit.setOnMouseClicked(new javafx.event.EventHandler<MouseEvent>() {
             @Override
             public void handle(MouseEvent event) {
-                if (!loginTF.getText().isEmpty() && !loginTF.getText().isEmpty() && !loginTF.getText().isEmpty() &&
-                        checkValidData(loginTF.getText(), pswTF.getText(), addrsTF.getText()))
+                if (!loginTF.getText().isEmpty() && !loginTF.getText().isEmpty() && !loginTF.getText().isEmpty()) {
                     login = loginTF.getText();
                     password = pswTF.getText();
                     address = addrsTF.getText();
-                    if (connector == null)
-                        connector = new BlockchainConnector("70b2a9422b2e990ca0add24f06faacb9d35065b23e5c9cb5f56470917fb8ca65"); //TODO: DELETE HARDCODE
-                    startMainWindow(primaryStage);
+//                    if (connector == null)
+                        connector = new BlockchainConnector(password,
+                                "/Users/victoria/IdeaProjects/GeoApps/icolabhack/src/main/resources/UTC--2017-09-23T09-59-58.770000000Z--41b85c73a60830e40e0a4b5d1bffe5deff6ae919.json");
+//                        connector = new BlockchainConnector("70b2a9422b2e990ca0add24f06faacb9d35065b23e5c9cb5f56470917fb8ca65",
+//                                null); //TODO: DELETE HARDCODE
+                    if (connector.checkValidData(loginTF.getText(), pswTF.getText(), addrsTF.getText()))
+                        startMainWindow(primaryStage);
+                }
             }
         });
         gridPane.setPadding(getInsets(0,0,0,10));
@@ -138,10 +142,6 @@ public class Main extends Application {
         primaryStage.setResizable(true);
     }
 
-    private boolean checkValidData(String login, String psw, String address){
-        // TODO: send to blockchain and check valid
-        return true; // TODO: delete HARDCODE
-    }
 
     private VBox getHistoryPane(int size){
         VBox historyBox = new VBox();
@@ -266,27 +266,15 @@ public class Main extends Application {
     }
 
     private void sendAccept(ActionEvent event) {
-        // TODO: send to the contract
+        connector.sendAccept();
     }
 
     private void sendReject(ActionEvent event) {
-        // TODO: send to the contract
+        connector.sendReject();
     }
 
     private void sendAssessment(ActionEvent event){
         String value = ((Button) event.getSource()).getText();
-        switch (value){
-            case "bad" :
-                // TODO send to the contract
-                System.out.println("Bad was pressed");
-                break;
-            case "well":
-                // TODO send to the contract
-                break;
-            case "good":
-                // TODO send to the contract
-                break;
-        }
     }
 
     public static void main(String[] args) {
