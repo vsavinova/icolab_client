@@ -10,9 +10,12 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.TextField;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
+import javafx.scene.text.Font;
 import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
 
@@ -25,14 +28,78 @@ public class Main extends Application {
 
     private String login = "login";
     private  String password = "123456";
+    private String address = "address";
+
+    private BlockchainConnector connector = null;
 
     @Override
     public void start(Stage primaryStage) throws Exception{
+       authWindow(primaryStage);
+    }
+
+    private void authWindow(Stage primaryStage){
+        VBox root = new VBox();
+        GridPane gridPane = new GridPane();
+        gridPane.setGridLinesVisible(false);
+
+        Label loginLbl = new Label("Account login: ");
+        Label pswLbl = new Label("Account password: ");
+        Label addrsLbl = new Label("Contract address: ");
+
+        TextField loginTF = new TextField();
+        TextField pswTF = new TextField();
+        TextField addrsTF = new TextField();
+
+        gridPane.addColumn(0, loginLbl, pswLbl, addrsLbl);
+        gridPane.addColumn(1, loginTF, pswTF, addrsTF);
+        ColumnConstraints constraints = new ColumnConstraints();
+        constraints.setPrefWidth(130);
+        ColumnConstraints constraints2 = new ColumnConstraints();
+        constraints2.setPrefWidth(220);
+        gridPane.getColumnConstraints().addAll(constraints, constraints2);
+
+        Button submit = new Button("submit");
+//        submit.setBackground(getBackground(Color.color(0.2, 0.7, 0.5, 0.1)));
+//        submit.setPadding(getInsets(15,15,15,15));
+        submit.setAlignment(Pos.CENTER);
+        submit.setOnMouseClicked(new javafx.event.EventHandler<MouseEvent>() {
+            @Override
+            public void handle(MouseEvent event) {
+                if (!loginTF.getText().isEmpty() && !loginTF.getText().isEmpty() && !loginTF.getText().isEmpty() &&
+                        checkValidData(loginTF.getText(), pswTF.getText(), addrsTF.getText()))
+                    login = loginTF.getText();
+                    password = pswTF.getText();
+                    address = addrsTF.getText();
+                    if (connector == null)
+                        connector = new BlockchainConnector("70b2a9422b2e990ca0add24f06faacb9d35065b23e5c9cb5f56470917fb8ca65"); //TODO: DELETE HARDCODE
+                    startMainWindow(primaryStage);
+            }
+        });
+        gridPane.setPadding(getInsets(0,0,0,10));
+        root.getChildren().addAll(gridPane, submit);
+        root.setAlignment(Pos.CENTER);
+        root.setPadding(getInsets(0,0,10,10));
+        primaryStage.setScene(new Scene(root, 350,130));
+        primaryStage.setResizable(false);
+        primaryStage.show();
+    }
+
+    private void startMainWindow(Stage primaryStage){
         VBox root = new VBox();//FXMLLoader.load(getClass().getResource("sample.fxml"));
         VBox header = new VBox();
-        Label account = new Label("account");
-        Label address = new Label("address");
-        Label balance = new Label("balance");
+        Label accountLbl = new Label("account: " + login);
+        Label addressLbl = new Label("address: " + address);
+        Double balance = null;
+        try {
+             balance = connector.getBalance();
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+        Label balanceLbl = new Label("balance: ");
+        if (balance != null)
+            balanceLbl.setText(balanceLbl.getText().concat(balance.toString()));
+        else
+            System.out.println("Some error while receiving balance");
         HBox hBox = new HBox();
 
         VBox history = getHistoryPane(3);
@@ -45,17 +112,36 @@ public class Main extends Application {
         hBox.setHgrow(history, Priority.ALWAYS);
         hBox.setHgrow(invoicesBox, Priority.ALWAYS);
 
-        header.getChildren().addAll(account, address, balance);
-        header.setBorder(new Border(new BorderStroke(Color.BLACK, BorderStrokeStyle.SOLID,
-                CornerRadii.EMPTY, BorderStroke.THIN)));
+        header.getChildren().addAll(accountLbl, addressLbl, balanceLbl);
+        header.setBorder(getBorder());
+        header.setPadding(getInsets(15,15,15,15));
+        header.setBackground(getBackground(Color.rgb(100, 200, 230, 0.1)));//Color.LIGHTSKYBLUE));
 
-        root.getChildren().addAll(header, hBox);
+
+        AnchorPane anchorPane = new AnchorPane();
+        Button back = new Button("back");
+        anchorPane.getChildren().add(back);
+        AnchorPane.setLeftAnchor(back, 15d);
+        AnchorPane.setTopAnchor(back, 5d);
+        back.setOnMouseClicked(new javafx.event.EventHandler<MouseEvent>() {
+            @Override
+            public void handle(MouseEvent event) {
+                authWindow(primaryStage);
+            }
+        });
+
+        root.getChildren().addAll(header, hBox, anchorPane);
         primaryStage.setTitle("ICO");
 //        primaryStage.setFullScreen(true);
         primaryStage.setScene(new Scene(root, 600, 600));
         primaryStage.show();
+        primaryStage.setResizable(true);
     }
 
+    private boolean checkValidData(String login, String psw, String address){
+        // TODO: send to blockchain and check valid
+        return true; // TODO: delete HARDCODE
+    }
 
     private VBox getHistoryPane(int size){
         VBox historyBox = new VBox();
@@ -68,7 +154,9 @@ public class Main extends Application {
         lblBox.setBackground(getBackground(Color.LIGHTGRAY));
 
         Label historyLbl = new Label("History");
-        historyLbl.setAlignment(Pos.BASELINE_CENTER);
+        historyLbl.setFont(Font.font(20));
+        historyLbl.setAlignment(Pos.CENTER);
+        historyLbl.setTextAlignment(TextAlignment.CENTER);
         historyLbl.setPrefSize(150, 30);
         lblBox.getChildren().add(historyLbl);
 
@@ -91,6 +179,7 @@ public class Main extends Application {
         lblBox.setBackground(getBackground(Color.LIGHTGRAY));
 
         Label invoicesLbl = new Label("Invoices");
+        invoicesLbl.setFont(Font.font(20));
         invoicesLbl.setPrefSize(150, 30);
         invoicesLbl.setTextAlignment(TextAlignment.CENTER);
         invoicesLbl.setAlignment(Pos.BASELINE_CENTER);
@@ -129,9 +218,10 @@ public class Main extends Application {
         localRoot.setPadding(getInsets(15,15,15,15));
         localRoot.setBorder(getBorder());
         localRoot.setAlignment(Pos.CENTER);
+        localRoot.setBackground(getBackground(Color.rgb(255, 255, 255, 0.5)));
+
         root.getChildren().add(localRoot);
         root.setPadding(getInsets(30,30,30,30));
-
         return root;
     }
 
@@ -166,11 +256,11 @@ public class Main extends Application {
         localRoot.getChildren().addAll(titleLbl, description, hBox);
         localRoot.setBorder(getBorder());
         localRoot.setAlignment(Pos.CENTER);
+        localRoot.setBackground(getBackground(Color.rgb(100, 200, 100, 0.1)));
         root.getChildren().add(localRoot);
 //        localRoot.setSpacing(30);
 //        localRoot.setPadding(getInsets(15, 15, 15, 15));
         root.setPadding(getInsets(30,30,30,30));
-//        root.setBackground(getBackground());
 
         return root;
     }
