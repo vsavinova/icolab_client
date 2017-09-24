@@ -3,6 +3,11 @@ package model;
 public class Phase {
     private String name;
     private String description;
+    private String price;
+
+    public String getPrice() {
+        return price;
+    }
 
     public String getDescription() {
         return description;
@@ -17,9 +22,10 @@ public class Phase {
     public Phase() {
     }
 
-    public Phase(String name, String description, boolean isFinished) {
+    public Phase(String name, String description,String price, boolean isFinished) {
         this.description = description;
         this.name = name;
+        this.price = price;
         this.isFinished = isFinished;
     }
 

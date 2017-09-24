@@ -33,20 +33,17 @@ public class BlockchainConnector {
     private Credentials credentials;
     private String address;
 
-    public BlockchainConnector(String pswd, @Nullable String file){
+    public BlockchainConnector(String pswd, @Nullable String file) throws Exception{
         web3j = Web3j.build(new HttpService());
         if (file == null)
             credentials = Credentials.create(pswd);
         else
-            try {
                 credentials = WalletUtils.loadCredentials(pswd, file);
-            } catch (Exception e){
-                e.printStackTrace();
-            }
+        address = credentials.getAddress();
     }
 
     public double getBalance() throws Exception{
-        address = credentials.getAddress();
+//        address = credentials.getAddress();
         EthGetBalance ethGetBalance = web3j
                 .ethGetBalance(address, DefaultBlockParameterName.LATEST)
                 .sendAsync()
@@ -59,11 +56,11 @@ public class BlockchainConnector {
         return balanceDecimal.doubleValue();
     }
 
-    public boolean checkValidData(String login, String psw, String address){
-        // TODO: send to blockchain and check valid
-        getPhases("",""); // because hardcode inside
-        return true; // TODO: delete HARDCODE
-    }
+//    public boolean checkValidData(String login, String psw, String address){
+//        // TODO: send to blockchain and check valid
+//        getPhases("",""); // because hardcode inside
+//        return true;
+//    }
 
     public void sendAccept() {
         // TODO: send to the contract
@@ -90,9 +87,10 @@ public class BlockchainConnector {
 
     public List<Phase> getPhases(String contractAddress, String functionName){
         ArrayList<Phase> phases = new ArrayList<>();
-        phases.add(new Phase("First phase", "Developing backend", true));
-        phases.add(new Phase("Third phase", "Developing Ios", false));
-        phases.add(new Phase("Second phase", "Developing web", true));
+        phases.add(new Phase("First phase", "Developing backend","50000", true));
+        phases.add(new Phase("Third phase", "Developing IOS","100000", false));
+        phases.add(new Phase("Second phase", "Developing web","70000", true));
+        phases.add(new Phase("Zero phase", "Planning project","10000", true));
 
         try {
            // List<Type> list = callFunc(contractAddress, functionName, new ArrayList(), new ArrayList());
