@@ -157,6 +157,8 @@ public class Main extends Application {
         anchorPane.setBorder(getBorder());
 //        anchorPane.setBackground(getBackground(Color.rgb(100, 200, 230, 0.1)));
         Button back = new Button("back");
+        back.setPrefSize(50,30);
+        back.setMaxWidth(Double.MAX_VALUE);
         anchorPane.getChildren().add(back);
         AnchorPane.setLeftAnchor(back, 30d);
         AnchorPane.setTopAnchor(back, 3d);
@@ -261,6 +263,7 @@ public class Main extends Application {
                 BorderStrokeStyle.SOLID, BorderStrokeStyle.NONE));
         String title = phase.getName();
         Label titleLbl = new Label(title);
+        Label descLbl = new Label(phase.getDescription() + "\nPrice: " + phase.getPrice());
 //        Label description = new Label("Some description ...");
         titleLbl.setPrefSize(150, 30);
         titleLbl.setMinSize(150, 30);
@@ -293,6 +296,14 @@ public class Main extends Application {
                         secretData = new SecretCLass();
                     secretData.setAddress(connector.getAddress());
                     secretData.estimated.add(phase.getUid());
+//                    descLbl.setPrefSize(150, 60);
+//                    descLbl.setTextAlignment(TextAlignment.CENTER);
+//                    descLbl.setAlignment(Pos.CENTER);
+//                    localRoot.getChildren().addAll(lblpane, descLbl);
+                    localRoot.setBackground(getBackground(Color.rgb(10, 10, 10, 0.3)));
+                    lblpane.setBackground(getBackground(Color.LIGHTGRAY));
+                    buttons.forEach(b -> b.setDisable(true));
+
                 }
             }));
             hBox.getChildren().addAll(buttons);
@@ -300,7 +311,7 @@ public class Main extends Application {
             hBox.setPadding(new Insets(10, 0, 5, 0));
             hBox.setAlignment(Pos.CENTER);
 
-            Label descLbl = new Label(phase.getDescription() + "\nPrice: " + phase.getPrice());
+//            Label descLbl = new Label(phase.getDescription() + "\nPrice: " + phase.getPrice());
 
             descLbl.setPrefSize(150, 50);
             descLbl.setTextAlignment(TextAlignment.CENTER);
@@ -310,7 +321,7 @@ public class Main extends Application {
             lblpane.setBackground(getBackground(Color.LIGHTGREEN));
 
         } else {
-            Label descLbl = new Label(phase.getDescription() + "\nPrice: " + phase.getPrice());
+//            Label descLbl = new Label(phase.getDescription() + "\nPrice: " + phase.getPrice());
             if (phase.isEstimated()) // if all tokenholders have estimated
                 descLbl.setText(descLbl.getText() + "\nEstimation: " + phase.getEstimation());
 
