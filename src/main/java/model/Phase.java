@@ -1,5 +1,7 @@
 package model;
 
+import org.web3j.abi.datatypes.Uint;
+
 public class Phase {
     private int uid;
     private String name;

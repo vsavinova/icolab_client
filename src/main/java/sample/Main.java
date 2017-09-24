@@ -19,12 +19,14 @@ import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
 import model.Phase;
+import org.web3j.abi.datatypes.Uint;
 import org.web3j.crypto.CipherException;
 
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -63,7 +65,7 @@ public class Main extends Application {
         gridPane.addColumn(0, loginLbl, pswLbl, addrsLbl);
         gridPane.addColumn(1, loginTF, pswTF, addrsTF);
         ColumnConstraints constraints = new ColumnConstraints();
-        constraints.setPrefWidth(140);
+        constraints.setPrefWidth(180);
         ColumnConstraints constraints2 = new ColumnConstraints();
         constraints2.setPrefWidth(220);
         gridPane.getColumnConstraints().addAll(constraints, constraints2);
@@ -81,7 +83,7 @@ public class Main extends Application {
                     contractAddress = addrsTF.getText();
 //                    if (connector == null)
                     try{
-                        connector = new BlockchainConnector(password, pathToWalFile);
+                        connector = new BlockchainConnector(password, pathToWalFile, contractAddress);
 //                                "/Users/victoria/IdeaProjects/GeoApps/icolabhack/src/main/resources/UTC--2017-09-23T09-59-58.770000000Z--41b85c73a60830e40e0a4b5d1bffe5deff6ae919.json");
 //                        connector = new BlockchainConnector("70b2a9422b2e990ca0add24f06faacb9d35065b23e5c9cb5f56470917fb8ca65",
 //                                null); //TODO: DELETE HARDCODE
@@ -101,7 +103,7 @@ public class Main extends Application {
         root.getChildren().addAll(gridPane, submit);
         root.setAlignment(Pos.CENTER);
         root.setPadding(getInsets(0,0,10,10));
-        primaryStage.setScene(new Scene(root, 360,130));
+        primaryStage.setScene(new Scene(root, 400,130));
         primaryStage.setResizable(false);
         primaryStage.show();
         primaryStage.setOnCloseRequest(new EventHandler<WindowEvent>() {
@@ -287,19 +289,23 @@ public class Main extends Application {
                 @Override
                 public void handle(ActionEvent event) {
                     String value = ((Button) event.getSource()).getText();
-                    connector.sendAssessment(value);
+                    try {
+                        connector.sendAssessment(new Uint(BigInteger.valueOf(phase.getUid())), value);
 
-                    if (secretData == null)
-                        secretData = new SecretCLass();
-                    secretData.setAddress(connector.getAddress());
-                    secretData.estimated.add(phase.getUid());
+                        if (secretData == null)
+                            secretData = new SecretCLass();
+                        secretData.setAddress(connector.getAddress());
+                        secretData.estimated.add(phase.getUid());
 //                    descLbl.setPrefSize(150, 60);
 //                    descLbl.setTextAlignment(TextAlignment.CENTER);
 //                    descLbl.setAlignment(Pos.CENTER);
 //                    localRoot.getChildren().addAll(lblpane, descLbl);
-                    localRoot.setBackground(getBackground(Color.rgb(10, 10, 10, 0.3)));
-                    lblpane.setBackground(getBackground(Color.LIGHTGRAY));
-                    buttons.forEach(b -> b.setDisable(true));
+                        localRoot.setBackground(getBackground(Color.rgb(10, 10, 10, 0.3)));
+                        lblpane.setBackground(getBackground(Color.LIGHTGRAY));
+                        buttons.forEach(b -> b.setDisable(true));
+                    } catch (Exception e){
+                        e.printStackTrace();
+                    }
 
                 }
             }));
@@ -375,37 +381,45 @@ public class Main extends Application {
         accept.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
-                connector.sendAccept();
-                if (secretData == null)
-                    secretData = new SecretCLass();
-                secretData.setAddress(connector.getAddress());
-                secretData.accepted.add(phase.getUid());
+                try {
+                    connector.sendAccept(new Uint(BigInteger.valueOf(phase.getUid())));
+                    if (secretData == null)
+                        secretData = new SecretCLass();
+                    secretData.setAddress(connector.getAddress());
+                    secretData.accepted.add(phase.getUid());
 
-                setWorkingOrRejectedState(titleLbl, lblpane, localRoot, accept, reject,
-                        "In working!", Color.LIGHTGRAY, Color.rgb(200, 200, 200, 0.8));
+                    setWorkingOrRejectedState(titleLbl, lblpane, localRoot, accept, reject,
+                            "In working!", Color.LIGHTGRAY, Color.rgb(200, 200, 200, 0.8));
 //                titleLbl.setText("In working!");
 //                lblpane.setBackground(getBackground(Color.LIGHTGRAY));
 //                localRoot.setBackground(getBackground(Color.rgb(200, 200, 200, 0.8)));
 //                accept.setDisable(true);
 //                reject.setDisable(true);
+                } catch (Exception e){
+                    e.printStackTrace();
+                }
             }
         });
         reject.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
-                connector.sendReject();
-                if (secretData == null)
-                    secretData = new SecretCLass();
-                secretData.setAddress(connector.getAddress());
-                secretData.rejected.add(phase.getUid());
-                setWorkingOrRejectedState(titleLbl, lblpane, localRoot, accept, reject,
-                        "Rejected!", Color.LIGHTGRAY, Color.rgb(200, 200, 200, 0.8));
+                try {
+                    connector.sendReject(new Uint(BigInteger.valueOf(phase.getUid())));
+                    if (secretData == null)
+                        secretData = new SecretCLass();
+                    secretData.setAddress(connector.getAddress());
+                    secretData.rejected.add(phase.getUid());
+                    setWorkingOrRejectedState(titleLbl, lblpane, localRoot, accept, reject,
+                            "Rejected!", Color.LIGHTGRAY, Color.rgb(200, 200, 200, 0.8));
 
 //                titleLbl.setText("Rejected!");
 //                lblpane.setBackground(getBackground(Color.LIGHTGRAY));
 //                localRoot.setBackground(getBackground(Color.rgb(200, 200, 200, 0.8)));
 //                accept.setDisable(true);
 //                reject.setDisable(true);
+                }catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
         });
 
