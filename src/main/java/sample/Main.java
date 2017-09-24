@@ -1,7 +1,12 @@
 package sample;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonWriter;
 import javafx.application.Application;
 import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -12,19 +17,29 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.TextAlignment;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import javafx.stage.WindowEvent;
 import model.Phase;
-import org.bouncycastle.jcajce.provider.symmetric.DES;
-import sun.security.krb5.internal.crypto.Des;
+import org.web3j.crypto.CipherException;
+import sun.security.jgss.GSSCaller;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.util.ArrayList;
 import java.util.List;
 
 public class Main extends Application {
+    private TextField loginTF = new TextField();
 
     private String login = "login";
     private  String password = "123456";
     private String contractAddress = "contractAddress";
+    private String secretFilePath = "/Users/victoria/IdeaProjects/icolab_client/src/main/resources/secret.json";
+    private File file;
+    private SecretCLass secretData;
 
     private BlockchainConnector connector = null;
 
@@ -45,7 +60,6 @@ public class Main extends Application {
         pswLbl.setPadding(getInsets(3,0,0,0));
         addrsLbl.setPadding(getInsets(3, 0, 0, 0));
 
-        TextField loginTF = new TextField();
         PasswordField pswTF = new PasswordField();
         TextField addrsTF = new TextField("0x395699a7e5a66f586d9debd06e4ddffbe57ffbad");
 
@@ -75,7 +89,11 @@ public class Main extends Application {
 //                        connector = new BlockchainConnector("70b2a9422b2e990ca0add24f06faacb9d35065b23e5c9cb5f56470917fb8ca65",
 //                                null); //TODO: DELETE HARDCODE
 //                    if (connector.checkValidData(loginTF.getText(), pswTF.getText(), addrsTF.getText()))
+                        getGsonFromFile();
                         startMainWindow(primaryStage);
+                    } catch (CipherException e){
+                        new Alert(Alert.AlertType.ERROR,"Wrong password").show();
+                        e.printStackTrace();
                     } catch (Exception e){
                         e.printStackTrace();
                     }
@@ -89,6 +107,12 @@ public class Main extends Application {
         primaryStage.setScene(new Scene(root, 360,130));
         primaryStage.setResizable(false);
         primaryStage.show();
+        primaryStage.setOnCloseRequest(new EventHandler<WindowEvent>() {
+            @Override
+            public void handle(WindowEvent event) {
+                saveToFile();
+            }
+        });
     }
 
     private void startMainWindow(Stage primaryStage){
@@ -112,8 +136,9 @@ public class Main extends Application {
             System.out.println("Some error while receiving balance");
         HBox hBox = new HBox();
 
-        VBox history = getHistoryPane(connector.getPhases(contractAddress, "getPhases"));
-        VBox invoicesBox = getInvoicePane();
+        List<List<Phase>> allPhases = connector.getPhases(contractAddress, "getPhases");
+        VBox invoicesBox = getInvoicePane(allPhases.get(0).get(0));
+        VBox history = getHistoryPane(allPhases.get(1));
 
         hBox.getChildren().addAll(invoicesBox, history);
         invoicesBox.setMaxWidth(Double.MAX_VALUE);
@@ -139,6 +164,8 @@ public class Main extends Application {
         back.setOnMouseClicked(new javafx.event.EventHandler<MouseEvent>() {
             @Override
             public void handle(MouseEvent event) {
+                saveToFile();
+//                loginTF.setText(login);
                 authWindow(primaryStage);
             }
         });
@@ -151,7 +178,6 @@ public class Main extends Application {
         primaryStage.show();
         primaryStage.setResizable(true);
     }
-
 
     private VBox getHistoryPane(List<Phase> phases){
         VBox historyBox = new VBox();
@@ -183,7 +209,7 @@ public class Main extends Application {
         // Sorting for newest being on the top
         for(int i=0; i < size; i++){
             Phase phase = phases.get(i);
-            if ((i != 0) && !phase.isFinished()) {
+            if ((i != 0) && !phase.isEstimated()) {
                 for (int j = i-1; j >= 0; j--) {
                     Phase shiftingPhase = phases.get(j);
                     phases.remove(j);
@@ -207,7 +233,7 @@ public class Main extends Application {
         return historyBox;
     }
 
-    private VBox getInvoicePane(){
+    private VBox getInvoicePane(Phase phase){
         VBox invoicesBox = new VBox();
         VBox lblBox = new VBox();
         lblBox.setBackground(getBackground(Color.LIGHTGRAY));
@@ -221,9 +247,7 @@ public class Main extends Application {
 
         invoicesBox.setFillWidth(true);
         invoicesBox.getChildren().add(lblBox);
-        invoicesBox.getChildren().add(drawInvoice(
-                new Phase("New invoice!", "","", false),
-                100, 100));
+        invoicesBox.getChildren().add(drawInvoice(phase));
         invoicesBox.setBorder(getBorder());
         return invoicesBox;
     }
@@ -244,7 +268,7 @@ public class Main extends Application {
         titleLbl.setAlignment(Pos.CENTER);
         lblpane.getChildren().add(titleLbl);
 
-        if (!phase.isFinished()) {
+        if (!phase.isEstimated() && !secretData.estimated.contains(phase.getUid())) {
             HBox hBox = new HBox();
             List<Button> buttons = new ArrayList<Button>();
             Button bad = new Button("bad");
@@ -258,13 +282,26 @@ public class Main extends Application {
             buttons.add(well);
             buttons.add(good);
             buttons.add(excel);
-            buttons.forEach((b) -> b.setOnAction(this::sendAssessment));
+            buttons.forEach((b) -> b.setOnAction(
+                    new EventHandler<ActionEvent>() {
+                @Override
+                public void handle(ActionEvent event) {
+                    String value = ((Button) event.getSource()).getText();
+                    connector.sendAssessment(value);
+
+                    if (secretData == null)
+                        secretData = new SecretCLass();
+                    secretData.setAddress(connector.getAddress());
+                    secretData.estimated.add(phase.getUid());
+                }
+            }));
             hBox.getChildren().addAll(buttons);
             hBox.setSpacing(10);
             hBox.setPadding(new Insets(10, 0, 5, 0));
             hBox.setAlignment(Pos.CENTER);
 
             Label descLbl = new Label(phase.getDescription() + "\nPrice: " + phase.getPrice());
+
             descLbl.setPrefSize(150, 50);
             descLbl.setTextAlignment(TextAlignment.CENTER);
             descLbl.setAlignment(Pos.CENTER);
@@ -274,7 +311,9 @@ public class Main extends Application {
 
         } else {
             Label descLbl = new Label(phase.getDescription() + "\nPrice: " + phase.getPrice());
-//        Label description = new Label("Some description ...");
+            if (phase.isEstimated()) // if all tokenholders have estimated
+                descLbl.setText(descLbl.getText() + "\nEstimation: " + phase.getEstimation());
+
             descLbl.setPrefSize(150, 60);
             descLbl.setTextAlignment(TextAlignment.CENTER);
             descLbl.setAlignment(Pos.CENTER);
@@ -292,7 +331,7 @@ public class Main extends Application {
         return root;
     }
 
-    private Node drawInvoice(Phase phase, double width, double height){
+    private Node drawInvoice(Phase phase){
         VBox root = new VBox();
         VBox localRoot = new VBox();
 //        AnchorPane localRoot = new AnchorPane();
@@ -307,7 +346,7 @@ public class Main extends Application {
         titleLbl.setTextAlignment(TextAlignment.CENTER);
         titleLbl.setAlignment(Pos.BASELINE_CENTER);
         lblpane.getChildren().add(titleLbl);
-        Label description = new Label("Some description ...\nAnd more description\nPrice:\t10000");
+        Label description = new Label(phase.getDescription() + "\nPrice: " + phase.getPrice());
         description.setAlignment(Pos.BASELINE_CENTER);
 
         HBox hBox = new HBox();
@@ -315,8 +354,52 @@ public class Main extends Application {
 
         Button accept = new Button("accept");
         Button reject = new Button("reject");
-        accept.setOnAction(this::sendAccept);
-        reject.setOnAction(this::sendReject);
+        if (secretData.accepted.contains(phase.getUid())){
+            setWorkingOrRejectedState(titleLbl, lblpane, localRoot, accept, reject,
+                    "In working!", Color.LIGHTGRAY, Color.rgb(200, 200, 200, 0.8));
+        } else if (secretData.rejected.contains(phase.getUid())){
+            setWorkingOrRejectedState(titleLbl, lblpane, localRoot, accept, reject,
+                    "Rejected!", Color.LIGHTGRAY, Color.rgb(200, 200, 200, 0.8));
+        } else{ // If new
+            localRoot.setBackground(getBackground(Color.rgb(100, 200, 100, 0.1)));
+        }
+
+        accept.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                connector.sendAccept();
+                if (secretData == null)
+                    secretData = new SecretCLass();
+                secretData.setAddress(connector.getAddress());
+                secretData.accepted.add(phase.getUid());
+
+                setWorkingOrRejectedState(titleLbl, lblpane, localRoot, accept, reject,
+                        "In working!", Color.LIGHTGRAY, Color.rgb(200, 200, 200, 0.8));
+//                titleLbl.setText("In working!");
+//                lblpane.setBackground(getBackground(Color.LIGHTGRAY));
+//                localRoot.setBackground(getBackground(Color.rgb(200, 200, 200, 0.8)));
+//                accept.setDisable(true);
+//                reject.setDisable(true);
+            }
+        });
+        reject.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                connector.sendReject();
+                if (secretData == null)
+                    secretData = new SecretCLass();
+                secretData.setAddress(connector.getAddress());
+                secretData.rejected.add(phase.getUid());
+                setWorkingOrRejectedState(titleLbl, lblpane, localRoot, accept, reject,
+                        "Rejected!", Color.LIGHTGRAY, Color.rgb(200, 200, 200, 0.8));
+
+//                titleLbl.setText("Rejected!");
+//                lblpane.setBackground(getBackground(Color.LIGHTGRAY));
+//                localRoot.setBackground(getBackground(Color.rgb(200, 200, 200, 0.8)));
+//                accept.setDisable(true);
+//                reject.setDisable(true);
+            }
+        });
 
         buttons.add(accept);
         buttons.add(reject);
@@ -330,7 +413,6 @@ public class Main extends Application {
         localRoot.getChildren().addAll(lblpane, description, hBox);
         localRoot.setBorder(getBorder());
         localRoot.setAlignment(Pos.CENTER);
-        localRoot.setBackground(getBackground(Color.rgb(100, 200, 100, 0.1)));
         root.getChildren().add(localRoot);
 //        localRoot.setSpacing(30);
 //        localRoot.setPadding(getInsets(15, 15, 15, 15));
@@ -339,16 +421,13 @@ public class Main extends Application {
         return root;
     }
 
-    private void sendAccept(ActionEvent event) {
-        connector.sendAccept();
-    }
-
-    private void sendReject(ActionEvent event) {
-        connector.sendReject();
-    }
-
-    private void sendAssessment(ActionEvent event){
-        String value = ((Button) event.getSource()).getText();
+    private void setWorkingOrRejectedState(Label titleLbl, Pane lblpane, VBox localRoot, Button accept, Button reject,
+                                    String textForLbl, Color paneColor, Color backColor){
+        titleLbl.setText(textForLbl);
+        lblpane.setBackground(getBackground(paneColor));
+        localRoot.setBackground(getBackground(backColor));
+        accept.setDisable(true);
+        reject.setDisable(true);
     }
 
     public static void main(String[] args) {
@@ -370,5 +449,68 @@ public class Main extends Application {
     }
     private Insets getInsets(double l, double r, double t, double b){
         return new Insets(t, r, b, l);
+    }
+
+    private void getGsonFromFile(){
+        Gson gson = new Gson();
+        try {
+            JsonReader reader = new JsonReader(new FileReader(secretFilePath));
+            secretData = gson.fromJson(reader, SecretCLass.class);
+            System.out.println(secretData);
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    private void saveToFile() {
+        try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(secretFilePath))){
+
+            bufferedWriter.append(new GsonBuilder().create().toJson(secretData, SecretCLass.class).toString());
+
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+
+
+    private class SecretCLass{
+        private String address;
+        private ArrayList<Integer> accepted = new ArrayList<>();
+        private ArrayList<Integer> rejected=  new ArrayList<>();
+        private ArrayList<Integer> estimated=  new ArrayList<>();
+
+        public SecretCLass() {
+        }
+
+        public ArrayList<Integer> getEstimated() {
+            return estimated;
+        }
+
+        public void setEstimated(ArrayList<Integer> estimated) {
+            this.estimated = estimated;
+        }
+
+        public ArrayList<Integer> getAccepted() {
+            return accepted;
+        }
+
+        public void setAccepted(ArrayList<Integer> accepted) {
+            this.accepted = accepted;
+        }
+
+        public ArrayList<Integer> getRejected() {
+            return rejected;
+        }
+
+        public void setRejected(ArrayList<Integer> rejected) {
+            this.rejected = rejected;
+        }
+        public String getAddress() {
+            return address;
+        }
+
+        public void setAddress(String address) {
+            this.address = address;
+        }
     }
 }

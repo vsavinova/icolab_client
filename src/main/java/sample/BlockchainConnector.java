@@ -26,11 +26,17 @@ import sun.security.provider.SHA;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class BlockchainConnector {
     private Web3j web3j;
     private Credentials credentials;
+
+    public String getAddress() {
+        return address;
+    }
+
     private String address;
 
     public BlockchainConnector(String pswd, @Nullable String file) throws Exception{
@@ -85,19 +91,30 @@ public class BlockchainConnector {
         }
     }
 
-    public List<Phase> getPhases(String contractAddress, String functionName){
-        ArrayList<Phase> phases = new ArrayList<>();
-        phases.add(new Phase("First phase", "Developing backend","50000", true));
-        phases.add(new Phase("Third phase", "Developing IOS","100000", false));
-        phases.add(new Phase("Second phase", "Developing web","70000", true));
-        phases.add(new Phase("Zero phase", "Planning project","10000", true));
+    public List<List<Phase>> getPhases(String contractAddress, String functionName){
+        ArrayList<List<Phase>> allPhases = new ArrayList<>();
+        ArrayList<Phase> newPhases = new ArrayList<>();
+        ArrayList<Phase> historyPhases = new ArrayList<>();
+        newPhases.add(new Phase(4,"New invoice!", "Marketting\nWe need a lot of resources",
+                "100000",0, false, true, false));
+        historyPhases.add(new Phase(1, "First phase", "Developing backend","50000",
+                0, true, false, true));
+        historyPhases.add(new Phase(3, "Third phase", "Developing IOS","100000",
+                0,true, false, false));
+        historyPhases.add(new Phase(2, "Second phase", "Developing web","70000",
+                0.6, true, false, true));
+        historyPhases.add(new Phase(0,"Zero phase", "Planning project","10000",
+                0.6,true, false, true));
 
+        allPhases.add(newPhases);
+        allPhases.add(historyPhases);
         try {
            // List<Type> list = callFunc(contractAddress, functionName, new ArrayList(), new ArrayList());
+            // iterate throw the list and get all new phases into one list and finished into annother list
         } catch (Exception e){
             e.printStackTrace();
         }
-        return phases;
+        return allPhases;
     }
 
     private List<Type> callFunc(String contractAddress,
