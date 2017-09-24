@@ -1,6 +1,8 @@
 package sample;
 
 import com.sun.istack.internal.Nullable;
+import com.sun.rmi.rmid.ExecPermission;
+import com.sun.tools.internal.xjc.reader.dtd.bindinfo.BIAttribute;
 import model.Phase;
 import org.web3j.abi.FunctionEncoder;
 import org.web3j.abi.FunctionReturnDecoder;
@@ -16,6 +18,8 @@ import org.web3j.protocol.core.DefaultBlockParameterName;
 import org.web3j.protocol.core.methods.request.Transaction;
 import org.web3j.protocol.core.methods.response.EthCall;
 import org.web3j.protocol.core.methods.response.EthGetBalance;
+import org.web3j.protocol.core.methods.response.EthGetTransactionCount;
+import org.web3j.protocol.core.methods.response.EthGetTransactionReceipt;
 import org.web3j.protocol.http.HttpService;
 import org.web3j.tx.ChainId;
 import org.web3j.tx.RawTransactionManager;
@@ -30,22 +34,26 @@ import java.util.Arrays;
 import java.util.List;
 
 public class BlockchainConnector {
+    private final BigInteger GAS_PRICE = BigInteger.ZERO;
+    private final BigInteger GAS_LIMIT = BigInteger.ZERO;
+    private final BigInteger NONCE = BigInteger.ZERO;
     private Web3j web3j;
     private Credentials credentials;
+    private String contractAddress;
+    private String address;
 
     public String getAddress() {
         return address;
     }
 
-    private String address;
-
-    public BlockchainConnector(String pswd, @Nullable String file) throws Exception{
+    public BlockchainConnector(String pswd, @Nullable String file, String contractAddress) throws Exception{
         web3j = Web3j.build(new HttpService());
         if (file == null)
             credentials = Credentials.create(pswd);
         else
                 credentials = WalletUtils.loadCredentials(pswd, file);
         address = credentials.getAddress();
+        this.contractAddress = contractAddress;
     }
 
     public double getBalance() throws Exception{
@@ -120,7 +128,7 @@ public class BlockchainConnector {
     private List<Type> callFunc(String contractAddress,
                                      String functionName, List inputArgs, List outputs) throws Exception{
         // TODO: DELETE HARDCODE FUNCS AND ADDRESSES!!!!
-        contractAddress = "0x395699a7e5a66f586d9debd06e4ddffbe57ffbad";
+//        contractAddress = "0x395699a7e5a66f586d9debd06e4ddffbe57ffbad";
 //        contractAddress = "0xa431fb52638fb43a5da01b0583961d895c2bb874";
         functionName = "getBalance";
         TransactionManager transactionManager = new RawTransactionManager(
@@ -134,7 +142,7 @@ public class BlockchainConnector {
         String encodedFunction = FunctionEncoder.encode(function);
         EthCall response = web3j.ethCall(Transaction.createEthCallTransaction(
                 credentials.getEcKeyPair().getPrivateKey().toString(16),
-                contractAddress, encodedFunction), DefaultBlockParameterName.LATEST).sendAsync().get();
+                this.contractAddress, encodedFunction), DefaultBlockParameterName.LATEST).sendAsync().get();
 
         if(response.hasError()){
             System.out.println("functionCall: " + response.getError().getMessage());
@@ -143,6 +151,43 @@ public class BlockchainConnector {
         System.out.println(res);
         System.out.println("Balance: " + outputs.get(0).toString());
         return res;
+    }
+
+    private void callStateOfContract(String funcName, Type value)  throws Exception{
+        Function function = new Function(
+                funcName,
+                Arrays.asList(value),  // Solidity Types in smart contract functions
+                Arrays.asList(new TypeReference<Type>(){}));
+
+        String encodedFunction = FunctionEncoder.encode(function);
+        org.web3j.protocol.core.methods.response.EthCall response = web3j.ethCall(
+                Transaction.createEthCallTransaction(address, contractAddress, encodedFunction),
+                DefaultBlockParameterName.LATEST)
+                .sendAsync().get();
+
+        List<Type> someTypes = FunctionReturnDecoder.decode(
+                response.getValue(), function.getOutputParameters());
+        someTypes.forEach(System.out::println);
+    }
+
+    private void callExistingSmartCntrct(String funcName, Type value) throws Exception{
+        Function function = new Function(
+                funcName,  // function we're calling
+                Arrays.asList(value),  // Parameters to pass as Solidity Types
+        Arrays.asList(new TypeReference<Type>() {}));
+
+        EthGetTransactionCount ethGetTransactionCount = web3j.ethGetTransactionCount(
+                address, DefaultBlockParameterName.LATEST).sendAsync().get();
+        BigInteger nonce = ethGetTransactionCount.getTransactionCount();
+
+        String encodedFunction = FunctionEncoder.encode(function);
+        Transaction transaction = Transaction.createFunctionCallTransaction( address, nonce, GAS_PRICE, GAS_LIMIT,
+                contractAddress, encodedFunction);
+
+        org.web3j.protocol.core.methods.response.EthSendTransaction transactionResponse =
+                web3j.ethSendTransaction(transaction).sendAsync().get();
+
+        String transactionHash = transactionResponse.getTransactionHash();
     }
 
     private void convertMyResult(List<Type> returns, List<String> results) throws Exception {
