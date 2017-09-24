@@ -4,9 +4,11 @@ import com.sun.istack.internal.Nullable;
 import model.Phase;
 import org.web3j.abi.FunctionEncoder;
 import org.web3j.abi.FunctionReturnDecoder;
+import org.web3j.abi.TypeReference;
 import org.web3j.abi.datatypes.Address;
 import org.web3j.abi.datatypes.Function;
 import org.web3j.abi.datatypes.Type;
+import org.web3j.abi.datatypes.Uint;
 import org.web3j.crypto.Credentials;
 import org.web3j.crypto.WalletUtils;
 import org.web3j.protocol.Web3j;
@@ -88,8 +90,12 @@ public class BlockchainConnector {
 
     public List<Phase> getPhases(String contractAddress, String functionName){
         ArrayList<Phase> phases = new ArrayList<>();
+        phases.add(new Phase("First phase", "Developing backend", true));
+        phases.add(new Phase("Third phase", "Developing Ios", false));
+        phases.add(new Phase("Second phase", "Developing web", true));
+
         try {
-            List<Type> list = callFunc(contractAddress, functionName, new ArrayList(), new ArrayList());
+           // List<Type> list = callFunc(contractAddress, functionName, new ArrayList(), new ArrayList());
         } catch (Exception e){
             e.printStackTrace();
         }
@@ -99,16 +105,16 @@ public class BlockchainConnector {
     private List<Type> callFunc(String contractAddress,
                                      String functionName, List inputArgs, List outputs) throws Exception{
         // TODO: DELETE HARDCODE FUNCS AND ADDRESSES!!!!
-//        contractAddress = "0x395699a7e5a66f586d9debd06e4ddffbe57ffbad"; 0.0
-        contractAddress = "0xa431fb52638fb43a5da01b0583961d895c2bb874";
+        contractAddress = "0x395699a7e5a66f586d9debd06e4ddffbe57ffbad";
+//        contractAddress = "0xa431fb52638fb43a5da01b0583961d895c2bb874";
         functionName = "getBalance";
         TransactionManager transactionManager = new RawTransactionManager(
                 web3j, credentials, ChainId.MAIN_NET);
         inputArgs = new ArrayList();
-        inputArgs.add(new Address("41b85c73a60830e40e0a4b5d1bffe5deff6ae919"));
+        inputArgs.add(new Address("0xa431fb52638fb43a5da01b0583961d895c2bb874"));//"41b85c73a60830e40e0a4b5d1bffe5deff6ae919"));
 //        inputArgs.add("41b85c73a60830e40e0a4b5d1bffe5deff6ae919");
 
-        List<String> results = new ArrayList();
+        outputs.add(TypeReference.create(Uint.class));
         Function function = new  Function(functionName, inputArgs, outputs);
         String encodedFunction = FunctionEncoder.encode(function);
         EthCall response = web3j.ethCall(Transaction.createEthCallTransaction(
@@ -118,7 +124,10 @@ public class BlockchainConnector {
         if(response.hasError()){
             System.out.println("functionCall: " + response.getError().getMessage());
         }
-        return FunctionReturnDecoder.decode(response.getValue(), function.getOutputParameters());
+        List<Type> res = FunctionReturnDecoder.decode(response.getValue(), function.getOutputParameters());
+        System.out.println(res);
+        System.out.println("Balance: " + outputs.get(0).toString());
+        return res;
     }
 
     private void convertMyResult(List<Type> returns, List<String> results) throws Exception {

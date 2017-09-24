@@ -7,10 +7,7 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.control.ScrollPane;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
@@ -18,10 +15,12 @@ import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
 import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
+import model.Phase;
 
 import java.beans.EventHandler;
 import java.nio.BufferUnderflowException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class Main extends Application {
@@ -47,7 +46,7 @@ public class Main extends Application {
         Label addrsLbl = new Label("Contract address: ");
 
         TextField loginTF = new TextField();
-        TextField pswTF = new TextField();
+        PasswordField pswTF = new PasswordField();
         TextField addrsTF = new TextField();
 
         gridPane.addColumn(0, loginLbl, pswLbl, addrsLbl);
@@ -91,22 +90,25 @@ public class Main extends Application {
     private void startMainWindow(Stage primaryStage){
         VBox root = new VBox();//FXMLLoader.load(getClass().getResource("sample.fxml"));
         VBox header = new VBox();
-        Label accountLbl = new Label("account: " + login);
-        Label addressLbl = new Label("address: " + address);
+        Label accountLbl = new Label("Account: " + login);
+        accountLbl.setFont(Font.font(18));
+        Label addressLbl = new Label("Address: " + address);
+        addressLbl.setFont(Font.font(18));
         Double balance = null;
         try {
              balance = connector.getBalance();
         } catch (Exception e){
             e.printStackTrace();
         }
-        Label balanceLbl = new Label("balance: ");
+        Label balanceLbl = new Label("Balance: ");
+        balanceLbl.setFont(Font.font(18));
         if (balance != null)
             balanceLbl.setText(balanceLbl.getText().concat(balance.toString()));
         else
             System.out.println("Some error while receiving balance");
         HBox hBox = new HBox();
 
-        VBox history = getHistoryPane(3);
+        VBox history = getHistoryPane(connector.getPhases(address, "getPhases"));
         VBox invoicesBox = getInvoicePane();
 
         hBox.getChildren().addAll(invoicesBox, history);
@@ -143,7 +145,7 @@ public class Main extends Application {
     }
 
 
-    private VBox getHistoryPane(int size){
+    private VBox getHistoryPane(List<Phase> phases){
         VBox historyBox = new VBox();
         VBox vFramesBox = new VBox();
         ScrollPane scrollPane = new ScrollPane();
@@ -165,8 +167,23 @@ public class Main extends Application {
 
         // Adding elements
         historyBox.getChildren().add(lblBox);
-        for (int i=0; i < size; i++)
-            vFramesBox.getChildren().add(drawHistoryInvoice("Old invoice"));
+        int size = phases.size();
+        // Sorting for newest being on the top
+        for(int i=0; i < size; i++){
+            Phase phase = phases.get(i);
+            if ((i != 0) && !phase.isFinished()) {
+                for (int j = i-1; j >= 0; j--) {
+                    Phase shiftingPhase = phases.get(j);
+                    phases.add(j + 1, shiftingPhase);
+                }
+                phases.add(0, phase);
+            }
+        }
+
+        for (int i=0; i < size; i++) {
+//            if (phases.get(0).isFinished())
+            vFramesBox.getChildren().add(drawHistoryInvoice(phases.get(i)));
+        }
 
         scrollPane.setContent(vFramesBox);
         historyBox.getChildren().add(vFramesBox);
@@ -192,33 +209,49 @@ public class Main extends Application {
         return invoicesBox;
     }
 
-    private VBox drawHistoryInvoice(String title){
+    private VBox drawHistoryInvoice(Phase phase){
         VBox root = new VBox();
         VBox localRoot = new VBox();
+        String title = phase.getName();
         Label titleLbl = new Label(title);
 //        Label description = new Label("Some description ...");
         titleLbl.setPrefSize(150, 30);
         titleLbl.setTextAlignment(TextAlignment.CENTER);
         titleLbl.setAlignment(Pos.CENTER);
 
-        HBox hBox = new HBox();
-        List<Button> buttons = new ArrayList<Button>();
-        Button bad = new Button("bad");
-        Button well = new Button("well");
-        Button good = new Button("good");
-        buttons.add(bad);
-        buttons.add(well);
-        buttons.add(good);
-        buttons.forEach((b)->b.setOnAction(this::sendAssessment));
-        hBox.getChildren().addAll(buttons);
-        hBox.setSpacing(10);
-        hBox.setAlignment(Pos.CENTER);
+        if (!phase.isFinished()) {
+            HBox hBox = new HBox();
+            List<Button> buttons = new ArrayList<Button>();
+            Button bad = new Button("bad");
+            Button well = new Button("well");
+            Button good = new Button("good");
+            bad.setBackground(getBackground(Color.color(1.0, 0.0, 0.0, 0.3)));
+            well.setBackground(getBackground(Color.color(1.0,1.0,0.0, 0.3)));
+            good.setBackground(getBackground(Color.color(0.0, 1.0, 0.8, 0.3)));
+            buttons.add(bad);
+            buttons.add(well);
+            buttons.add(good);
+            buttons.forEach((b) -> b.setOnAction(this::sendAssessment));
+            hBox.getChildren().addAll(buttons);
+            hBox.setSpacing(10);
+            hBox.setAlignment(Pos.CENTER);
 
-        localRoot.getChildren().addAll(titleLbl, hBox/*, description*/);
+            localRoot.getChildren().addAll(titleLbl, hBox/*, description*/);
+            localRoot.setBackground(getBackground(Color.rgb(100, 200, 100, 0.1)));
+        } else {
+            Label descLbl = new Label(phase.getDescription());
+//        Label description = new Label("Some description ...");
+            descLbl.setPrefSize(150, 30);
+            descLbl.setTextAlignment(TextAlignment.CENTER);
+            descLbl.setAlignment(Pos.CENTER);
+            localRoot.getChildren().addAll(titleLbl, descLbl);
+            localRoot.setBackground(getBackground(Color.LIGHTGRAY));//Color.rgb(100, 200, 230, 0.1)));
+        }
+
         localRoot.setPadding(getInsets(15,15,15,15));
         localRoot.setBorder(getBorder());
         localRoot.setAlignment(Pos.CENTER);
-        localRoot.setBackground(getBackground(Color.rgb(255, 255, 255, 0.5)));
+
 
         root.getChildren().add(localRoot);
         root.setPadding(getInsets(30,30,30,30));
