@@ -3,7 +3,6 @@ package sample;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.stream.JsonReader;
-import com.google.gson.stream.JsonWriter;
 import javafx.application.Application;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -17,12 +16,10 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.TextAlignment;
-import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
 import model.Phase;
 import org.web3j.crypto.CipherException;
-import sun.security.jgss.GSSCaller;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -34,7 +31,7 @@ import java.util.List;
 public class Main extends Application {
     private TextField loginTF = new TextField();
 
-    private String login = "login";
+    private String pathToWalFile = "pathToWalFile";
     private  String password = "123456";
     private String contractAddress = "contractAddress";
     private String secretFilePath = "/Users/victoria/IdeaProjects/icolab_client/src/main/resources/secret.json";
@@ -53,7 +50,7 @@ public class Main extends Application {
         GridPane gridPane = new GridPane();
         gridPane.setGridLinesVisible(false);
 
-        Label loginLbl = new Label("Account login:   ");
+        Label loginLbl = new Label("Account pathToWalFile:   ");
         Label pswLbl = new Label("Account password:    ");
         Label addrsLbl = new Label("Contract contractAddress:   ");
         loginLbl.setPadding(getInsets(3, 0, 0, 0));
@@ -79,13 +76,13 @@ public class Main extends Application {
             @Override
             public void handle(MouseEvent event) {
                 if (!loginTF.getText().isEmpty() && !loginTF.getText().isEmpty() && !loginTF.getText().isEmpty()) {
-                    login = loginTF.getText();
+                    pathToWalFile = loginTF.getText();
                     password = pswTF.getText();
                     contractAddress = addrsTF.getText();
 //                    if (connector == null)
                     try{
-                        connector = new BlockchainConnector(password,
-                                "/Users/victoria/IdeaProjects/GeoApps/icolabhack/src/main/resources/UTC--2017-09-23T09-59-58.770000000Z--41b85c73a60830e40e0a4b5d1bffe5deff6ae919.json");
+                        connector = new BlockchainConnector(password, pathToWalFile);
+//                                "/Users/victoria/IdeaProjects/GeoApps/icolabhack/src/main/resources/UTC--2017-09-23T09-59-58.770000000Z--41b85c73a60830e40e0a4b5d1bffe5deff6ae919.json");
 //                        connector = new BlockchainConnector("70b2a9422b2e990ca0add24f06faacb9d35065b23e5c9cb5f56470917fb8ca65",
 //                                null); //TODO: DELETE HARDCODE
 //                    if (connector.checkValidData(loginTF.getText(), pswTF.getText(), addrsTF.getText()))
@@ -118,7 +115,7 @@ public class Main extends Application {
     private void startMainWindow(Stage primaryStage){
         VBox root = new VBox();//FXMLLoader.load(getClass().getResource("sample.fxml"));
         VBox header = new VBox();
-        Label accountLbl = new Label("Account: " + login);
+        Label accountLbl = new Label("Account: " + connector.getAddress()); //pathToWalFile);
         accountLbl.setFont(Font.font(18));
         Label addressLbl = new Label("Address: " + contractAddress);
         addressLbl.setFont(Font.font(18));
@@ -167,7 +164,7 @@ public class Main extends Application {
             @Override
             public void handle(MouseEvent event) {
                 saveToFile();
-//                loginTF.setText(login);
+//                loginTF.setText(pathToWalFile);
                 authWindow(primaryStage);
             }
         });
